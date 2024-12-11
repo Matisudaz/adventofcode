@@ -43,3 +43,14 @@
           (result 0))
          ((or (null n1) (null n2)) result)
       (incf result (abs (- (car n1) (car n2)))))))
+
+
+(defun calc-similarity-score-between-two-list (file)
+  (multiple-value-bind (lst1 lst2) (read-two-number-list-from-file file)
+    (let ((hash-table (make-hash-table))
+          (result 0))
+      (loop for item in lst2
+            do (incf (gethash item hash-table 0)))
+      (loop for item in lst1
+            do (incf result (* item (gethash item hash-table 0))))
+      result)))
