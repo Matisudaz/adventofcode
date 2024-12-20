@@ -13,6 +13,7 @@
   (loop for char = (read-char *stream* nil :eof)
         until (eq char :eof)
         when (or (char= char #\m)
+                 (char= char #\d)
                  (char= char #\()
                  (char= char #\))
                  (char= char #\,)
@@ -90,6 +91,13 @@
                 (or
                  (read-mul)
                  (read-rubbish))))
+             ((and
+               (and (char= char #\d) (read-char *stream*))
+               (and (char= char #\o) (read-char *stream*)))
+              (or
+               (read-do)
+               (read-dont)
+               (read-rubbish)))
              (t (return-from next-token-raw (read-rubbish))))))
 
 (defvar *temp-token* nil)
