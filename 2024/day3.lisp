@@ -1,14 +1,5 @@
-;; token
-;;
-;;
-;;
-;;
-
-;; parse
-
 (defvar *stream* nil)
-
-; 
+ 
 (defstruct token "A token"
    (token-type nil)
    (token-value nil))
@@ -17,21 +8,18 @@
    (left-value nil)
    (right-value nil))
 
-;;
-(defun ignore-rubbish ()
+(defun read-rubbish ()
   "ignore rubbish"
   (loop for char = (read-char *stream* nil :eof)
         until (eq char :eof)
         when (or (char= char #\m)
-                 (char= char #\u)
-                 (char= char #\l)
                  (char= char #\()
                  (char= char #\))
                  (char= char #\,)
                  (digit-char-p char 10))
           do
              (unread-char char *stream*)
-             (return-from ignore-rubbish nil)
+             (return-from read-rubbish (make-token :token-type :rubbish :token-value nil))
         ))
 
 (defun read-comma ()
@@ -47,10 +35,9 @@
   (make-token :token-type :rpara :token-value (read-char *stream*)))
 
 (defun read-mul ()
-  (read-char *stream*)
-  (or
-   (or (char= (peek-char nil *stream* nil :eof) #\u) (read-char *stream*))
-   (or (char= (peek-char nil *stream* nil :eof) #\l) (read-char *stream*))))
+  (and
+   (and (char= (peek-char nil *stream* nil :eof) #\u) (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\l) (read-char *stream*))))
 
 (defun parse-number (char-list)
   (parse-integer (coerce char-list 'string)))
@@ -69,23 +56,68 @@
           finally (return-from read-number (parse-number (reverse numbers)))
           )))
 
-(defun next-token ()
+(defun next-token-raw ()
   "Get next token"
   (loop for char = (peek-char nil *stream* nil :eof)
         until (eq char :eof)
         do
            (cond
-             ((char= char #\,) (return-from next-token (read-comma)))
-             ((char= char #\() (return-from next-token (read-lpara)))
-             ((char= char #\)) (return-from next-token (read-rpara)))
+             ((char= char #\,) (return-from next-token-raw (read-comma)))
+             ((char= char #\() (return-from next-token-raw (read-lpara)))
+             ((char= char #\)) (return-from next-token-raw (read-rpara)))
              ((digit-char-p char 10)
-              (return-from next-token (make-token :token-type :number :token-value (read-number))))
-             ((and (char= char #\m) (read-mul))
-              (return-from next-token (make-token :token-type :mul :token-value "mul"))))
-           (ignore-rubbish)))
+              (return-from next-token-raw (make-token :token-type :number :token-value (read-number))))
+             ((and (char= char #\m) (read-char *stream*) (read-mul))
+              (return-from next-token-raw (make-token :token-type :mul :token-value "mul")))
+             (t (return-from next-token-raw (read-rubbish))))))
 
-(defun parse
-  )
+(defvar *temp-token* nil)
+
+(defun peek-token ()
+  (if *temp-token*
+      *temp-token*
+      (setf *temp-token* (next-token-raw))))
+
+(defun next-token ()
+  (setf *temp-token* (next-token-raw)))
+
+
+(defun get-mul-op ()
+  (let ((token (peek-token)))
+    (cond
+      ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :mul) (next-token))
+      (t
+       (next-token)
+       (throw 'restart (parse-mul-op))))))
+
+(defun get-lpara ()
+  (let ((token (peek-token)))
+    (cond
+      ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :lpara) (next-token))
+      (t (throw 'restart (parse-mul-op))))))
+
+(defun get-number ()
+  (let ((token (peek-token)))
+    (cond
+      ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :number) (next-token) (token-token-value token))
+      (t (throw 'restart (parse-mul-op))))))
+
+(defun get-comma ()
+  (let ((token (peek-token)))
+    (cond
+      ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :comma) (next-token))
+      (t (throw 'restart (parse-mul-op))))))
+
+(defun get-rpara ()
+  (let ((token (peek-token)))
+    (cond
+      ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :rpara) (next-token))
+      (t (throw 'restart (parse-mul-op))))))
 
 (defun parse-mul-op ()
   "parse mul operation"
@@ -93,54 +125,22 @@
         (right-value 0))
     (catch 'restart
       (get-mul-op)
-      (catch 'continue
-        (get-lpara)
-        (setf left-value (get-number))
-        (get-comma)
-        (setf right-value (get-number))
-        (get-rpara)))
-    (make-mul-op :left-value left-value :right-value right-value)))
+      (get-lpara)
+      (setf left-value (get-number))
+      (get-comma)
+      (setf right-value (get-number))
+      (get-rpara)
+      (make-mul-op :left-value left-value :right-value right-value))))
 
-(defun get-mul-op ()
-  (let ((token (next-token)))
-    (unless (eq (token-token-type token) :mul)
-      (throw 'restart))))
+(defun get-result (mul-op)
+  (* (mul-op-left-value mul-op)
+     (mul-op-right-value mul-op)))
 
-(defun get-lpara ()
-  (let ((token (next-token)))
-    (cond
-      ((eq (token-token-type token) :lpara) nil)
-      ((eq (token-token-type token) :mul)
-       (throw 'continue))
-      (t (throw 'restart)))))
-
-(defun get-number ()
-  (let ((token (next-token)))
-    (cond
-      ((eq (token-token-type token) :number) (token-token-value token))
-      ((eq (token-token-type token) :mul)
-       (throw 'continue))
-      (t (throw 'restart)))))
-
-(defun get-comma ()
-  (let ((token (next-token)))
-    (cond
-      ((eq (token-token-type token) :comma) nil)
-      ((eq (token-token-type token) :mul)
-       (throw 'continue))
-      (t (throw 'restart)))))
-
-(defun get-rpara
-  (let ((token (next-token)))
-    (cond
-      ((eq (token-token-type token) :rpara) nil)
-      ((eq (token-token-type token) :mul)
-       (throw 'continue))
-      (t (throw 'restart)))))
-
-(defun test-file (file)
+(defun add-result-of-multi-op (file)
   (with-open-file (stream file :direction :input
                                :if-does-not-exist :error)
     (let ((*stream* stream))
-      (next-token))
-    ))
+      (reduce #'+
+              (loop for op = (parse-mul-op)
+                    until (eq op nil)
+                    collect (get-result op))))))
