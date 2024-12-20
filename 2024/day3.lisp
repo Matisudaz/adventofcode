@@ -37,7 +37,24 @@
 (defun read-mul ()
   (and
    (and (char= (peek-char nil *stream* nil :eof) #\u) (read-char *stream*))
-   (and (char= (peek-char nil *stream* nil :eof) #\l) (read-char *stream*))))
+   (and (char= (peek-char nil *stream* nil :eof) #\l) (read-char *stream*))
+   (make-token :token-type :mul :token-value "mul")))
+
+(defun read-do ()
+  (and
+   (and (char= (peek-char nil *stream* nil :eof) #\() (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\)) (read-char *stream*))
+   (make-token :token-type :do :token-value nil)))
+
+(defun read-dont ()
+  (and
+   (and (char= (peek-char nil *stream* nil :eof) #\n) (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\') (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\t) (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\() (read-char *stream*))
+   (and (char= (peek-char nil *stream* nil :eof) #\)) (read-char *stream*))
+   (make-token :token-type :dont :token-value nil)))
+
 
 (defun parse-number (char-list)
   (parse-integer (coerce char-list 'string)))
@@ -45,16 +62,17 @@
 (defun read-number ()
   (let ((numbers nil))
     (loop for char = (read-char *stream* nil :eof)
-          until (eq char :eof)
-          when (digit-char-p char 10)
-            do
-               (setf numbers (cons char numbers))
-          when (not (digit-char-p char 10))
-            do
-               (unread-char char *stream*)
-               (return-from read-number (parse-number (reverse numbers)))
-          finally (return-from read-number (parse-number (reverse numbers)))
-          )))
+                      until (eq char :eof)
+                      when (digit-char-p char 10)
+                        do
+                           (setf numbers (cons char numbers))
+                      when (not (digit-char-p char 10))
+                        do
+                           (unread-char char *stream*)
+                           (return-from read-number (make-token :token-type :number
+                                                                     :token-value (parse-number (reverse numbers))))
+                      finally (return-from read-number (make-token :token-type :number
+                                                                        :token-value (parse-number (reverse numbers)))))))
 
 (defun next-token-raw ()
   "Get next token"
@@ -66,9 +84,12 @@
              ((char= char #\() (return-from next-token-raw (read-lpara)))
              ((char= char #\)) (return-from next-token-raw (read-rpara)))
              ((digit-char-p char 10)
-              (return-from next-token-raw (make-token :token-type :number :token-value (read-number))))
-             ((and (char= char #\m) (read-char *stream*) (read-mul))
-              (return-from next-token-raw (make-token :token-type :mul :token-value "mul")))
+              (return-from next-token-raw (read-number)))
+             ((and (char= char #\m) (read-char *stream*))
+              (return-from next-token-raw
+                (or
+                 (read-mul)
+                 (read-rubbish))))
              (t (return-from next-token-raw (read-rubbish))))))
 
 (defvar *temp-token* nil)
