@@ -93,14 +93,17 @@
                  (read-rubbish))))
              ((and
                (and (char= char #\d) (read-char *stream*))
-               (and (char= char #\o) (read-char *stream*)))
-              (or
-               (read-do)
-               (read-dont)
-               (read-rubbish)))
+               (and (char= (peek-char nil *stream* nil :eof) #\o) (read-char *stream*)))
+              (return-from next-token-raw
+                (or
+                 (read-do)
+                 (read-dont)
+                 (read-rubbish))))
              (t (return-from next-token-raw (read-rubbish))))))
 
 (defvar *temp-token* nil)
+
+(defvar *enable* t)
 
 (defun peek-token ()
   (if *temp-token*
@@ -110,11 +113,18 @@
 (defun next-token ()
   (setf *temp-token* (next-token-raw)))
 
-
 (defun get-mul-op ()
   (let ((token (peek-token)))
     (cond
       ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :do)
+       (setf *enable* t)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
+      ((eq (token-token-type token) :dont)
+       (setf *enable* nil)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
       ((eq (token-token-type token) :mul) (next-token))
       (t
        (next-token)
@@ -124,6 +134,14 @@
   (let ((token (peek-token)))
     (cond
       ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :do)
+       (setf *enable* t)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
+      ((eq (token-token-type token) :dont)
+       (setf *enable* nil)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
       ((eq (token-token-type token) :lpara) (next-token))
       (t (throw 'restart (parse-mul-op))))))
 
@@ -131,6 +149,14 @@
   (let ((token (peek-token)))
     (cond
       ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :do)
+       (setf *enable* t)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
+      ((eq (token-token-type token) :dont)
+       (setf *enable* nil)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
       ((eq (token-token-type token) :number) (next-token) (token-token-value token))
       (t (throw 'restart (parse-mul-op))))))
 
@@ -138,6 +164,14 @@
   (let ((token (peek-token)))
     (cond
       ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :do)
+       (setf *enable* t)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
+      ((eq (token-token-type token) :dont)
+       (setf *enable* nil)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
       ((eq (token-token-type token) :comma) (next-token))
       (t (throw 'restart (parse-mul-op))))))
 
@@ -145,6 +179,14 @@
   (let ((token (peek-token)))
     (cond
       ((eq token nil) (throw 'restart nil))
+      ((eq (token-token-type token) :do)
+       (setf *enable* t)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
+      ((eq (token-token-type token) :dont)
+       (setf *enable* nil)
+       (next-token)
+       (throw 'restart (parse-mul-op)))
       ((eq (token-token-type token) :rpara) (next-token))
       (t (throw 'restart (parse-mul-op))))))
 
@@ -162,8 +204,10 @@
       (make-mul-op :left-value left-value :right-value right-value))))
 
 (defun get-result (mul-op)
-  (* (mul-op-left-value mul-op)
-     (mul-op-right-value mul-op)))
+  (if *enable*
+      (* (mul-op-left-value mul-op)
+         (mul-op-right-value mul-op))
+      0))
 
 (defun add-result-of-multi-op (file)
   (with-open-file (stream file :direction :input
