@@ -2,23 +2,54 @@
 
 (defvar *search-word* "XMAS")
 
+(defun get-pos-by-direction (row col &key (step 1) direction)
+  (case direction
+    (:left       (list row (- col step)))
+    (:right      (list row (+ col step)))
+    (:up         (list (- row step) col))
+    (:down       (list (+ row step) col))
+    (:left-up    (list (- row step) (- col step)))
+    (:left-down  (list (+ row step) (- col step)))
+    (:right-up   (list (- row step) (+ col step)))
+    (:right-down (list (+ row step) (+ col step)))))
+
 (defun get-possible-pos (row col len &key direction)
   (loop for i from 0 to (- len 1)
-        collect (case direction
-                  (:left       (cons row (- col i)))
-                  (:right      (cons row (+ col i)))
-                  (:up         (cons (- row i) col))
-                  (:down       (cons (+ row i) col))
-                  (:left-up    (cons (- row i) (- col i)))
-                  (:left-down  (cons (+ row i) (- col i)))
-                  (:right-up   (cons (- row i) (+ col i)))
-                  (:right-down (cons (+ row i) (+ col i))))))
+        collect (get-pos-by-direction row col :step i :direction direction)))
 
 (defun get-row (pos)
   (car pos))
 
 (defun get-col (pos)
-  (cdr pos))
+  (cadr pos))
+
+(defun my-format (msg)
+  (format t msg)
+  t)
+
+(defun match (row col)
+  (and
+   (char= (aref *words-map* row col) #\A)
+   (or
+    (and
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :left-up)) #\M)
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :right-down)) #\S))
+    (and
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :left-up)) #\S)
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :right-down)) #\M)))
+   (or
+    (and
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :left-down)) #\M)
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :right-up)) #\S))
+    (and
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :left-down)) #\S)
+     (char= (apply #'aref *words-map* (get-pos-by-direction row col :direction :right-up)) #\M)))))
+
+(defun safe-match (row col)
+  (handler-case (match row col)
+    (sb-int:invalid-array-index-error (condition)
+      (declare (ignore condition))
+      nil)))
 
 (defun find-word (possible-pos)
   (do*
@@ -62,4 +93,13 @@
     (loop for i below (array-dimension *words-map* 0) do 
       (loop for j below (array-dimension *words-map* 1) do 
         (incf result (try-find-word i j))))
+    result))
+
+(defun find-all-xmas (file)
+  (let ((result 0)
+        (*words-map* (file-to-2d-char-array file)))
+    (loop for i below (array-dimension *words-map* 0) do
+      (loop for j below (array-dimension *words-map* 1)
+        when (safe-match i j)
+          do (incf result)))
     result))
