@@ -11,7 +11,14 @@
     :components
     ((:module "src"
       :components
-      ((:module "day1"
-        :components ((:file "day1")))))))
+      ((:file "initialize")
+       (:file "package" :depends-on ("initialize"))
+       (:file "misc" :depends-on ("package"))
+       (:module "day1"
+        :depends-on ("misc")
+        :components ((:file "solution")))
+       (:module "day2"
+        :depends-on ("misc")
+        :components ((:file "solution")))))))
 
   
