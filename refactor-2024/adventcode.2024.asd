@@ -7,7 +7,8 @@
     :license "MIT"
     :homepage "https://github.com/Matisudaz/adventofcode/tree/main/2024"
     :depends-on (:alexandria
-                 :series)
+                 :series
+                 :cl-ppcre)
     :components
     ((:module "src"
       :components
