@@ -20,6 +20,9 @@
         :components ((:file "solution")))
        (:module "day2"
         :depends-on ("misc")
+        :components ((:file "solution")))
+       (:module "day3"
+        :depends-on ("misc")
         :components ((:file "solution")))))))
 
   
