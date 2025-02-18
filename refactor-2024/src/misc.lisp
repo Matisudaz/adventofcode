@@ -16,6 +16,6 @@
     (merge-pathnames input-file system-dir)))
 
 (defun remove-one-element (lst)
-  (mapcar (lambda (x)
-            (remove x lst :count 1))
-          lst))
+  (loop for i from 0 below (length lst)
+        collect (append (subseq lst 0 i)
+                       (subseq lst (1+ i)))))

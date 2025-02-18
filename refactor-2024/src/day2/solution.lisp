@@ -32,7 +32,7 @@
   (count-if #'safe-levels? (read-input (input-pathname))))
 
 (defun safe-dampened-levels? (levels)
-  (find-if #'safe-levels? (remove-one-element levels)))
+   (find-if #'safe-levels? (remove-one-element levels)))
 
 (defun part-2 ()
   (count-if #'safe-dampened-levels? (read-input (input-pathname))))
