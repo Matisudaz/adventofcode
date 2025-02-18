@@ -2,6 +2,8 @@
 
 (provide :adventcode.2024.day2)
 
+(defparameter *CURRENT-DIR* "day2")
+
 (defun read-levels (stream eof-error-p eof-value)
   (let ((line (read-line stream eof-error-p eof-value)))
     (if (eq line eof-value)
@@ -22,7 +24,7 @@
   (let ((deltas (deltas (scan list))))
     (let ((ascending (collect-and (#Mplusp deltas)))
           (descending (collect-and (#Mminusp deltas)))
-          (small (collect-and (#M<= (Mmabs deltas) (series 3)))))
+          (small (collect-and (#M<= (#Mabs deltas) (series 3)))))
       (and small
            (or ascending descending)))))
 

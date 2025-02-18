@@ -2,7 +2,8 @@
 
 (defpackage :adventcode.2024
   (:use :cl)
-  (:export :input-pathname))
+  (:export :input-pathname
+           :remove-one-element))
 
 (defpackage :adventcode.2024.day1
   (:use :cl :series :adventcode.2024)

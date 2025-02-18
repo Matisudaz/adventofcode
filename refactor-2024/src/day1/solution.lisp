@@ -2,6 +2,8 @@
 
 (provide :adventcode.2024.day1)
 
+(defparameter *CURRENT-DIR* "day1")
+
 (defun read-input (input-pathname)
   (multiple-value-bind (left-column right-column)
       (chunk 2 2 (scan-file input-pathname))
